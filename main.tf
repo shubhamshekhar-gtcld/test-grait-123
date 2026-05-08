@@ -1,4 +1,4 @@
-# Preserved the provider credentials placeholder exactly as-is.
+# No functional infrastructure changes were made.
             # Modified Terraform Code for AWS in us-east-1
 
             terraform {

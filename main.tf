@@ -1,7 +1,7 @@
-# Creates a production-oriented S3 bucket in us-east-1 named grait-123456 with BucketOwnerEnforced (ACLs disabled) object ownership, full public access blocking, versioning enabled, and default SSE-S3 (AES256) encryption.
-# Generated Terraform code for AWS in us-east-1
+# Preserved the provider credentials placeholder exactly as-is.
+            # Modified Terraform Code for AWS in us-east-1
 
-terraform {
+            terraform {
   required_version = ">= 1.14.0"
 
   required_providers {
@@ -12,7 +12,7 @@ terraform {
   }
 }
 
-variable "aws_region" {
+            variable "aws_region" {
   description = "AWS region to deploy into."
   type        = string
   default     = "us-east-1"
@@ -80,14 +80,18 @@ variable "tags" {
   }
 }
 
-provider "aws" {
+            provider "aws" {
   {{block_to_replace_cred}}
   region = var.aws_region
 }
 
 resource "aws_s3_bucket" "main" {
   bucket = var.bucket_name
-  tags   = var.tags
+
+  # Add/override Environment tag specifically for this bucket without changing var.tags defaults
+  tags = merge(var.tags, {
+    Environment = "Dev"
+  })
 }
 
 resource "aws_s3_bucket_ownership_controls" "main" {
@@ -124,7 +128,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
   }
 }
 
-output "s3_bucket_id" {
+            output "s3_bucket_id" {
   description = "ID of the created S3 bucket (typically the bucket name)."
   value       = aws_s3_bucket.main.id
 }

@@ -1,4 +1,4 @@
-# No functional infrastructure changes were made.
+# Added a single EC2 instance resource (aws_instance.test) with instance_type = t2.micro and tag Name=TestInstance.
             # Modified Terraform Code for AWS in us-east-1
 
             terraform {
@@ -128,6 +128,38 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
   }
 }
 
+# Lookup default VPC + a default subnet (no infrastructure created/changed by these data sources)
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+
+  # Narrow to subnets that are marked as default for their AZ.
+  # (There is typically one default subnet per AZ in the default VPC.)
+  filter {
+    name   = "default-for-az"
+    values = ["true"]
+  }
+}
+
+# New EC2 instance (requested)
+resource "aws_instance" "test" {
+  ami                    = "ami-0c02fb55956c7d316" # Amazon Linux 2 in us-east-1 (static ID; verify/adjust if your account/region requires a different AMI)
+  instance_type          = "t2.micro"
+  subnet_id              = tolist(data.aws_subnets.default.ids)[0]
+
+  # Use the subnet's default security group implicitly; no SG resources created.
+
+  tags = merge(var.tags, {
+    Name = "TestInstance"
+  })
+}
+
             output "s3_bucket_id" {
   description = "ID of the created S3 bucket (typically the bucket name)."
   value       = aws_s3_bucket.main.id
@@ -141,4 +173,14 @@ output "s3_bucket_arn" {
 output "s3_bucket_name" {
   description = "Name of the created S3 bucket."
   value       = aws_s3_bucket.main.bucket
+}
+
+output "ec2_instance_id" {
+  description = "ID of the created EC2 instance."
+  value       = aws_instance.test.id
+}
+
+output "ec2_instance_public_ip" {
+  description = "Public IP of the created EC2 instance (if assigned)."
+  value       = aws_instance.test.public_ip
 }

@@ -1,7 +1,7 @@
-# Creates a single EC2 instance named test-123 in us-east-1 using the provided AMI and instance type, with no public IP, termination protection enabled, detailed monitoring disabled, and IMDS http_tokens set to optional. Root block device uses provider/AWS defaults (size/type).
-# Generated Terraform code for AWS in us-east-1
+# Added a minimal S3 bucket resource named 'testify-12345678' with default settings (no versioning, no encryption configuration). No existing resources or variables were modified, and the provider credential placeholder {{block_to_replace_cred}} is preserved exactly.
+            # Modified Terraform Code for AWS in us-east-1
 
-terraform {
+            terraform {
   required_version = ">= 1.14.0"
 
   required_providers {
@@ -12,7 +12,7 @@ terraform {
   }
 }
 
-variable "ami_id" {
+            variable "ami_id" {
   description = "AMI ID to use for the EC2 instance."
   type        = string
   default     = "ami-0ed094fb1304fd857"
@@ -102,7 +102,7 @@ variable "tags" {
   }
 }
 
-provider "aws" {
+            provider "aws" {
   region = var.region
 
   {{block_to_replace_cred}}
@@ -131,7 +131,11 @@ resource "aws_instance" "main" {
   )
 }
 
-output "instance_id" {
+resource "aws_s3_bucket" "testify_12345678" {
+  bucket = "testify-12345678"
+}
+
+            output "instance_id" {
   description = "ID of the EC2 instance."
   value       = aws_instance.main.id
 }
@@ -144,4 +148,9 @@ output "instance_arn" {
 output "private_ip" {
   description = "Private IPv4 address assigned to the instance."
   value       = aws_instance.main.private_ip
+}
+
+output "s3_bucket_name" {
+  description = "Name of the S3 bucket."
+  value       = aws_s3_bucket.testify_12345678.bucket
 }

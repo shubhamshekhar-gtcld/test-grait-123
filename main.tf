@@ -1,7 +1,7 @@
-# Added a minimal S3 bucket resource named 'testify-12345678' with default settings (no versioning, no encryption configuration). No existing resources or variables were modified, and the provider credential placeholder {{block_to_replace_cred}} is preserved exactly.
-            # Modified Terraform Code for AWS in us-east-1
+# Creates an enterprise-ready S3 bucket in us-east-1 named grait-ansha-test-78392 with BucketOwnerEnforced (ACLs disabled), all public access blocked, versioning enabled, and default SSE-S3 encryption (AES256).
+# Generated Terraform code for AWS in us-east-1
 
-            terraform {
+terraform {
   required_version = ">= 1.14.0"
 
   required_providers {
@@ -12,145 +12,84 @@
   }
 }
 
-            variable "ami_id" {
-  description = "AMI ID to use for the EC2 instance."
-  type        = string
-  default     = "ami-0ed094fb1304fd857"
-
-  validation {
-    condition     = can(regex("^ami-[a-z0-9]+$", var.ami_id))
-    error_message = "ami_id must look like an AMI ID (e.g., ami-xxxxxxxxxxxxxxxxx)."
-  }
-}
-
-variable "associate_public_ip_address" {
-  description = "Whether to associate a public IP address to the primary network interface."
-  type        = bool
-  default     = false
-}
-
-variable "disable_api_termination" {
-  description = "If true, enables EC2 termination protection."
-  type        = bool
-  default     = true
-}
-
-variable "ebs_optimized" {
-  description = "If true, requests an EBS-optimized instance (only supported on some instance types)."
-  type        = bool
-  default     = true
-}
-
-variable "http_tokens" {
-  description = "IMDSv2 setting for metadata service. Valid values: optional, required."
-  type        = string
-  default     = "optional"
-
-  validation {
-    condition     = contains(["optional", "required"], var.http_tokens)
-    error_message = "http_tokens must be one of: optional, required."
-  }
-}
-
-variable "instance_name" {
-  description = "Name tag for the EC2 instance."
-  type        = string
-  default     = "test-123"
-
-  validation {
-    condition     = length(var.instance_name) > 0
-    error_message = "instance_name must not be empty."
-  }
-}
-
-variable "instance_type" {
-  description = "EC2 instance type."
-  type        = string
-  default     = "t2.micro"
-}
-
-variable "key_name" {
-  description = "Existing EC2 Key Pair name to enable SSH access."
-  type        = string
-  default     = "qwertyu"
-
-  validation {
-    condition     = length(var.key_name) > 0
-    error_message = "key_name must not be empty."
-  }
-}
-
-variable "monitoring" {
-  description = "Whether detailed monitoring is enabled."
-  type        = bool
-  default     = false
-}
-
-variable "region" {
-  description = "AWS region to deploy into."
+variable "aws_region" {
+  description = "AWS region to deploy resources into."
   type        = string
   default     = "us-east-1"
 }
 
+variable "bucket_name" {
+  description = "Name of the S3 bucket to create."
+  type        = string
+  default     = "grait-ansha-test-78392"
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", var.bucket_name))
+    error_message = "bucket_name must be a valid S3 bucket name (3-63 chars, lowercase, numbers, dots, hyphens)."
+  }
+}
+
 variable "tags" {
-  description = "Additional tags to apply to resources."
+  description = "Tags to apply to all resources that support tagging."
   type        = map(string)
   default = {
     Environment = "prod"
     ManagedBy   = "terraform"
-    Project     = "test-grait-123"
+    Project     = "grait"
   }
 }
 
-            provider "aws" {
-  region = var.region
-
+provider "aws" {
+  region = var.aws_region
   {{block_to_replace_cred}}
 }
 
-resource "aws_instance" "main" {
-  ami                         = var.ami_id
-  associate_public_ip_address = var.associate_public_ip_address
-  disable_api_termination     = var.disable_api_termination
-  ebs_optimized               = var.ebs_optimized
-  instance_type               = var.instance_type
-  key_name                    = var.key_name
-  monitoring                  = var.monitoring
+resource "aws_s3_bucket" "this" {
+  bucket = var.bucket_name
+  tags   = var.tags
+}
 
-  metadata_options {
-    http_tokens = var.http_tokens
+resource "aws_s3_bucket_ownership_controls" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
   }
+}
 
-  root_block_device {}
+resource "aws_s3_bucket_public_access_block" "this" {
+  bucket = aws_s3_bucket.this.id
 
-  tags = merge(
-    var.tags,
-    {
-      Name = var.instance_name
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
-  )
+  }
 }
 
-resource "aws_s3_bucket" "testify_12345678" {
-  bucket = "testify-12345678"
+output "s3_bucket_id" {
+  description = "ID (name) of the created S3 bucket."
+  value       = aws_s3_bucket.this.id
 }
 
-            output "instance_id" {
-  description = "ID of the EC2 instance."
-  value       = aws_instance.main.id
-}
-
-output "instance_arn" {
-  description = "ARN of the EC2 instance."
-  value       = aws_instance.main.arn
-}
-
-output "private_ip" {
-  description = "Private IPv4 address assigned to the instance."
-  value       = aws_instance.main.private_ip
-}
-
-output "s3_bucket_name" {
-  description = "Name of the S3 bucket."
-  value       = aws_s3_bucket.testify_12345678.bucket
+output "s3_bucket_arn" {
+  description = "ARN of the created S3 bucket."
+  value       = aws_s3_bucket.this.arn
 }
